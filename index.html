@@ -128,7 +128,7 @@
   <div id="survey" class="hidden">
     <div class="topbar">
       <div class="topline">
-        <span><b id="prog-num"></b> / 80 <span id="prog-word"></span></span>
+        <span><b id="prog-num"></b> / <span id="prog-total"></span> <span id="prog-word"></span></span>
         <span id="who"></span>
       </div>
       <div class="bar"><div id="prog-fill"></div></div>
@@ -155,14 +155,19 @@
 "use strict";
 /* ================= config ================= */
 const API_URL = "https://script.google.com/macros/s/AKfycbzTa26SQ75dTBEKqDPk_741UJWLbRWicaG59m4oJAwCaLBfEdQJ2mor_JzfZ2OqFBCP/exec";
-const STORE_PREFIX = "festdpo_v1_";
+
+// ?test=5 -> short 5-question version (separate saved progress, sessionId tagged "_test5")
+const TEST_N = Math.max(0, parseInt(new URLSearchParams(location.search).get("test")) || 0);
+const ITEMS = TEST_N ? SURVEY_ITEMS.slice(0, TEST_N) : SURVEY_ITEMS;
+const N_ITEMS = ITEMS.length;
+const STORE_PREFIX = "festdpo_v1_" + (TEST_N ? "test" + TEST_N + "_" : "");
 
 /* ================= i18n ================= */
 const T = {
   en: {
     title: "Image Evaluation Survey",
     sub: "A study on the quality of AI-generated images",
-    guide: `There are <b>80 questions</b> in total. Each question shows one text prompt and
+    guide: `There are <b>${N_ITEMS} questions</b> in total. Each question shows one text prompt and
       4 generated images. Please rate each image on two criteria, from <b>1 to 5</b>.
       <ul>
         <li><b>Text alignment</b> — how closely the image matches the given text prompt
@@ -205,7 +210,7 @@ const T = {
   ko: {
     title: "이미지 평가 설문",
     sub: "AI 생성 이미지 품질 평가 연구",
-    guide: `총 <b>80문항</b>입니다. 각 문항에서 하나의 텍스트 프롬프트와 4장의 생성 이미지가
+    guide: `총 <b>${N_ITEMS}문항</b>입니다. 각 문항에서 하나의 텍스트 프롬프트와 4장의 생성 이미지가
       표시됩니다. 각 이미지에 대해 두 가지 항목을 <b>1~5점</b>으로 평가해 주세요.
       <ul>
         <li><b>텍스트 일치도</b> — 이미지가 주어진 텍스트 프롬프트의 내용과 얼마나 잘 일치하는지
@@ -267,6 +272,7 @@ function applyLang() {
   if ($("gate-err").textContent) $("gate-err").textContent = t("errName");
   // survey (re-render if active)
   $("prog-word").textContent = t("progWord");
+  $("prog-total").textContent = N_ITEMS;
   if (S && !$("survey").classList.contains("hidden")) render();
   // done
   if (doneState) renderDone();
@@ -317,18 +323,18 @@ function initState(name) {
   if (saved) {
     try {
       const st = JSON.parse(saved);
-      if (st.itemOrder && st.itemOrder.length === SURVEY_ITEMS.length) { S = st; return; }
+      if (st.itemOrder && st.itemOrder.length === ITEMS.length) { S = st; return; }
     } catch (e) { /* corrupt -> reinit */ }
   }
   const rng = mulberry32(xmur3("festdpo|" + nameKey)());
-  const itemOrder = shuffled(SURVEY_ITEMS.map((_, i) => i), rng);
+  const itemOrder = shuffled(ITEMS.map((_, i) => i), rng);
   const perms = {};
-  for (const it of SURVEY_ITEMS) perms[it.id] = shuffled([0, 1, 2, 3], rng);
+  for (const it of ITEMS) perms[it.id] = shuffled([0, 1, 2, 3], rng);
   const answers = {};
-  for (const it of SURVEY_ITEMS) answers[it.id] = { align: [null,null,null,null], aes: [null,null,null,null] };
+  for (const it of ITEMS) answers[it.id] = { align: [null,null,null,null], aes: [null,null,null,null] };
   const startedAt = new Date().toISOString();
   S = { name: name.trim(), nameKey, itemOrder, perms, answers, cursor: 0,
-        startedAt, sessionId: nameKey + "_" + startedAt, phone: null };
+        startedAt, sessionId: nameKey + "_" + startedAt + (TEST_N ? "_test" + TEST_N : ""), phone: null };
   save();
 }
 
@@ -346,7 +352,7 @@ $("btn-start").onclick = () => {
 };
 
 /* ================= survey render ================= */
-function curItem() { return SURVEY_ITEMS[S.itemOrder[S.cursor]]; }
+function curItem() { return ITEMS[S.itemOrder[S.cursor]]; }
 
 function itemComplete(it) {
   const a = S.answers[it.id];
@@ -357,7 +363,7 @@ function render() {
   const it = curItem();
   const perm = S.perms[it.id];          // display position p shows original image index perm[p]
   $("prog-num").textContent = S.cursor + 1;
-  $("prog-fill").style.width = (100 * S.cursor / SURVEY_ITEMS.length) + "%";
+  $("prog-fill").style.width = (100 * S.cursor / ITEMS.length) + "%";
   $("who").textContent = t("who", S.name);
   $("prompt-text").textContent = it.prompt;
 
@@ -408,7 +414,7 @@ function render() {
 function updateNav() {
   const it = curItem();
   const done = itemComplete(it);
-  const last = S.cursor === SURVEY_ITEMS.length - 1;
+  const last = S.cursor === ITEMS.length - 1;
   $("btn-prev").textContent = t("prev");
   $("btn-prev").disabled = S.cursor === 0;
   $("btn-next").disabled = !done;
@@ -417,8 +423,8 @@ function updateNav() {
 }
 
 function preloadNext() {
-  if (S.cursor + 1 < SURVEY_ITEMS.length) {
-    for (const im of SURVEY_ITEMS[S.itemOrder[S.cursor + 1]].images) {
+  if (S.cursor + 1 < ITEMS.length) {
+    for (const im of ITEMS[S.itemOrder[S.cursor + 1]].images) {
       const i = new Image(); i.src = im.src;
     }
   }
@@ -427,7 +433,7 @@ function preloadNext() {
 $("btn-prev").onclick = () => { if (S.cursor > 0) { S.cursor--; save(); render(); } };
 $("btn-next").onclick = () => {
   if (!itemComplete(curItem())) return;
-  if (S.cursor === SURVEY_ITEMS.length - 1) { finish(); return; }
+  if (S.cursor === ITEMS.length - 1) { finish(); return; }
   S.cursor++; save(); render();
 };
 $("lightbox").onclick = () => $("lightbox").classList.add("hidden");
@@ -439,7 +445,7 @@ document.addEventListener("keydown", (e) => {
 function buildRows() {
   const rows = [];
   const ts = new Date().toISOString();
-  for (const it of SURVEY_ITEMS) {
+  for (const it of ITEMS) {
     const perm = S.perms[it.id];
     perm.forEach((origIdx, pos) => {
       const img = it.images[origIdx];
