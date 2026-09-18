@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Image Evaluation Study</title>
+<script src="data.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --line: #e3e6ea;
+    --text: #1c2330; --sub: #6b7484; --accent: #3b5bdb; --accent-soft: #e7ecfd;
+    --good: #2f9e44;
+  }
+  body { font-family: 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+         background: var(--bg); color: var(--text); line-height: 1.55; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 60px; }
+  .hidden { display: none !important; }
+
+  /* ---------- gate ---------- */
+  .gate-card { max-width: 640px; margin: 40px auto; background: var(--card);
+               border: 1px solid var(--line); border-radius: 12px; padding: 32px; }
+  .gate-card h1 { font-size: 22px; margin-bottom: 6px; }
+  .gate-card .sub { color: var(--sub); font-size: 14px; margin-bottom: 22px; }
+  .guide { background: #f2f5ff; border: 1px solid #dbe3fb; border-radius: 10px;
+           padding: 16px 18px; font-size: 14px; margin-bottom: 22px; }
+  .guide b { color: var(--accent); }
+  .guide ul { margin: 8px 0 0 18px; }
+  .guide li { margin-bottom: 6px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 14px 0 6px; }
+  input[type=text] { width: 100%; padding: 11px 12px; font-size: 15px;
+                     border: 1px solid var(--line); border-radius: 8px; outline: none; }
+  input[type=text]:focus { border-color: var(--accent); }
+  .err { color: #d6336c; font-size: 13px; margin-top: 10px; min-height: 18px; }
+  .btn { display: inline-block; border: none; cursor: pointer; border-radius: 9px;
+         font-size: 15px; font-weight: 600; padding: 12px 22px; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:disabled { background: #b8c2e8; cursor: default; }
+  .btn-ghost { background: var(--card); border: 1px solid var(--line); color: var(--text); }
+  .btn-block { width: 100%; margin-top: 20px; }
+
+  /* ---------- header / progress ---------- */
+  .topbar { position: sticky; top: 0; z-index: 10; background: var(--bg);
+            padding: 10px 0 12px; }
+  .topline { display: flex; justify-content: space-between; align-items: baseline;
+             font-size: 13px; color: var(--sub); margin-bottom: 6px; }
+  .topline b { color: var(--text); font-size: 15px; }
+  .bar { height: 6px; background: #e6e9ee; border-radius: 3px; overflow: hidden; }
+  .bar > div { height: 100%; background: var(--accent); width: 0%; transition: width .2s; }
+
+  /* ---------- prompt ---------- */
+  .prompt-box { background: var(--card); border: 1px solid var(--line);
+                border-radius: 12px; padding: 16px 20px; margin: 14px 0 18px; }
+  .prompt-box .cap { font-size: 12px; font-weight: 700; color: var(--accent);
+                     letter-spacing: .4px; margin-bottom: 4px; }
+  .prompt-box .txt { font-size: 17px; font-weight: 600; }
+
+  /* ---------- image cards ---------- */
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+          overflow: hidden; display: flex; flex-direction: column; }
+  .card.complete { border-color: var(--good); box-shadow: 0 0 0 1px var(--good); }
+  .card .imgno { font-size: 12px; font-weight: 700; color: var(--sub);
+                 padding: 8px 12px 4px; }
+  .card img { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #eceef1;
+              cursor: zoom-in; display: block; }
+  .rate { padding: 10px 12px 12px; }
+  .rate .rlabel { font-size: 12px; font-weight: 600; color: var(--sub); margin: 6px 0 4px; }
+  .scale { display: flex; gap: 5px; }
+  .scale button { flex: 1; padding: 8px 0; font-size: 14px; font-weight: 600;
+                  border: 1px solid var(--line); background: #fff; border-radius: 7px;
+                  cursor: pointer; color: var(--text); }
+  .scale button:hover { border-color: var(--accent); }
+  .scale button.sel { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ---------- nav ---------- */
+  .nav { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+  .nav .hint { font-size: 13px; color: var(--sub); }
+
+  /* ---------- lightbox ---------- */
+  #lightbox { position: fixed; inset: 0; background: rgba(10,12,18,.88); z-index: 50;
+              display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+  #lightbox img { max-width: 94vw; max-height: 94vh; }
+
+  /* ---------- done ---------- */
+  .done-card { max-width: 560px; margin: 60px auto; background: var(--card);
+               border: 1px solid var(--line); border-radius: 12px; padding: 36px; text-align: center; }
+  .done-card h2 { margin-bottom: 10px; }
+  .done-card p { color: var(--sub); font-size: 14px; margin-bottom: 8px; }
+  .spin { display: inline-block; width: 22px; height: 22px; border: 3px solid #d6dcf5;
+          border-top-color: var(--accent); border-radius: 50%; animation: sp 1s linear infinite;
+          margin-bottom: 12px; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ========== entry gate ========== -->
+  <div id="gate" class="gate-card">
+    <h1>이미지 평가 설문</h1>
+    <div class="sub">텍스트 프롬프트로 생성된 이미지 품질 평가 연구</div>
+    <div class="guide">
+      총 <b>80문항</b>이며 약 <b>40~50분</b> 소요됩니다. 각 문항에서 하나의 텍스트 프롬프트와
+      4장의 생성 이미지가 표시됩니다. 각 이미지에 대해 두 가지 항목을 <b>1~5점</b>으로 평가해 주세요.
+      <ul>
+        <li><b>텍스트 일치도</b> — 이미지가 주어진 텍스트 프롬프트의 내용과 얼마나 잘 일치하는지
+            (1 = 매우 나쁨, 5 = 매우 좋음). 네 이미지를 서로 비교하면서 점수를 매겨 주세요.</li>
+        <li><b>심미성 (선호도)</b> — 이미지의 전반적인 품질과 아름다움에 대한 개인적인 선호
+            (1 = 매우 별로, 5 = 매우 좋음).</li>
+      </ul>
+      <ul style="margin-top:10px">
+        <li>이미지를 클릭하면 크게 볼 수 있습니다.</li>
+        <li>진행 상황은 <b>이 브라우저에 자동 저장</b>됩니다. 중간에 창을 닫아도 같은 기기·브라우저에서
+            같은 이름으로 다시 접속하면 이어서 진행됩니다.</li>
+        <li>모든 문항 완료 후 마지막에 <b>제출 버튼</b>을 꼭 눌러 주세요.</li>
+      </ul>
+    </div>
+    <label>이름 (본인 확인용, 실명 또는 전달받은 ID)</label>
+    <input type="text" id="inp-name" placeholder="예: 홍길동" autocomplete="off">
+    <label>접속 코드</label>
+    <input type="text" id="inp-code" placeholder="전달받은 접속 코드를 입력하세요" autocomplete="off">
+    <div class="err" id="gate-err"></div>
+    <button class="btn btn-primary btn-block" id="btn-start">시작하기</button>
+  </div>
+
+  <!-- ========== survey ========== -->
+  <div id="survey" class="hidden">
+    <div class="topbar">
+      <div class="topline">
+        <span><b id="prog-num"></b> / 80 문항</span>
+        <span id="who"></span>
+      </div>
+      <div class="bar"><div id="prog-fill"></div></div>
+    </div>
+    <div class="prompt-box">
+      <div class="cap">TEXT PROMPT</div>
+      <div class="txt" id="prompt-text"></div>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="nav">
+      <button class="btn btn-ghost" id="btn-prev">← 이전</button>
+      <span class="hint" id="nav-hint"></span>
+      <button class="btn btn-primary" id="btn-next">다음 →</button>
+    </div>
+  </div>
+
+  <!-- ========== done / submit ========== -->
+  <div id="done" class="done-card hidden"></div>
+
+</div>
+<div id="lightbox" class="hidden"><img id="lightbox-img" alt=""></div>
+
+<script>
+"use strict";
+/* ================= config ================= */
+const API_URL = "";              // Google Apps Script web app URL (set after deploy)
+const ACCESS_CODE = "fest2026";
+const STORE_PREFIX = "festdpo_v1_";
+
+/* ================= seeded rng ================= */
+function xmur3(str) {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return function () {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    return (h ^= h >>> 16) >>> 0;
+  };
+}
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function shuffled(arr, rng) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* ================= state ================= */
+let S = null;   // { name, nameKey, itemOrder, perms, answers, cursor, startedAt }
+const $ = (id) => document.getElementById(id);
+
+function storeKey(nameKey) { return STORE_PREFIX + nameKey; }
+function save() { localStorage.setItem(storeKey(S.nameKey), JSON.stringify(S)); }
+
+function initState(name) {
+  const nameKey = name.trim().toLowerCase().replace(/\s+/g, "");
+  const saved = localStorage.getItem(storeKey(nameKey));
+  if (saved) {
+    try {
+      const st = JSON.parse(saved);
+      if (st.itemOrder && st.itemOrder.length === SURVEY_ITEMS.length) { S = st; return; }
+    } catch (e) { /* corrupt -> reinit */ }
+  }
+  const rng = mulberry32(xmur3("festdpo|" + nameKey)());
+  const itemOrder = shuffled(SURVEY_ITEMS.map((_, i) => i), rng);
+  const perms = {};
+  for (const it of SURVEY_ITEMS) perms[it.id] = shuffled([0, 1, 2, 3], rng);
+  const answers = {};
+  for (const it of SURVEY_ITEMS) answers[it.id] = { align: [null,null,null,null], aes: [null,null,null,null] };
+  S = { name: name.trim(), nameKey, itemOrder, perms, answers, cursor: 0,
+        startedAt: new Date().toISOString() };
+  save();
+}
+
+/* ================= gate ================= */
+$("btn-start").onclick = () => {
+  const name = $("inp-name").value.trim();
+  const code = $("inp-code").value.trim();
+  if (name.length < 2) { $("gate-err").textContent = "이름을 입력해 주세요."; return; }
+  if (code !== ACCESS_CODE) { $("gate-err").textContent = "접속 코드가 올바르지 않습니다."; return; }
+  initState(name);
+  $("gate").classList.add("hidden");
+  $("survey").classList.remove("hidden");
+  render();
+};
+
+/* ================= survey render ================= */
+function curItem() { return SURVEY_ITEMS[S.itemOrder[S.cursor]]; }
+
+function itemComplete(it) {
+  const a = S.answers[it.id];
+  return a.align.every(v => v !== null) && a.aes.every(v => v !== null);
+}
+
+function render() {
+  const it = curItem();
+  const perm = S.perms[it.id];          // display position p shows original image index perm[p]
+  $("prog-num").textContent = S.cursor + 1;
+  $("prog-fill").style.width = (100 * S.cursor / SURVEY_ITEMS.length) + "%";
+  $("who").textContent = S.name + " 님";
+  $("prompt-text").textContent = it.prompt;
+
+  const grid = $("grid");
+  grid.innerHTML = "";
+  perm.forEach((origIdx, pos) => {
+    const img = it.images[origIdx];
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML =
+      `<div class="imgno">이미지 ${pos + 1}</div>` +
+      `<img src="${img.src}" loading="eager" alt="이미지 ${pos + 1}">` +
+      `<div class="rate">` +
+        `<div class="rlabel">텍스트 일치도</div><div class="scale" data-k="align"></div>` +
+        `<div class="rlabel">심미성 (선호도)</div><div class="scale" data-k="aes"></div>` +
+      `</div>`;
+    card.querySelector("img").onclick = () => {
+      $("lightbox-img").src = img.src;
+      $("lightbox").classList.remove("hidden");
+    };
+    for (const scaleEl of card.querySelectorAll(".scale")) {
+      const k = scaleEl.dataset.k;
+      for (let v = 1; v <= 5; v++) {
+        const b = document.createElement("button");
+        b.textContent = v;
+        if (S.answers[it.id][k][origIdx] === v) b.classList.add("sel");
+        b.onclick = () => {
+          S.answers[it.id][k][origIdx] = v;
+          save();
+          for (const x of scaleEl.children) x.classList.remove("sel");
+          b.classList.add("sel");
+          card.classList.toggle("complete",
+            S.answers[it.id].align[origIdx] !== null && S.answers[it.id].aes[origIdx] !== null);
+          updateNav();
+        };
+        scaleEl.appendChild(b);
+      }
+    }
+    if (S.answers[it.id].align[origIdx] !== null && S.answers[it.id].aes[origIdx] !== null)
+      card.classList.add("complete");
+    grid.appendChild(card);
+  });
+  updateNav();
+  preloadNext();
+  window.scrollTo(0, 0);
+}
+
+function updateNav() {
+  const it = curItem();
+  const done = itemComplete(it);
+  const last = S.cursor === SURVEY_ITEMS.length - 1;
+  $("btn-prev").disabled = S.cursor === 0;
+  $("btn-next").disabled = !done;
+  $("btn-next").textContent = last ? "제출하기 ✓" : "다음 →";
+  $("nav-hint").textContent = done ? "" : "모든 이미지에 두 항목씩 점수를 매겨 주세요";
+}
+
+function preloadNext() {
+  if (S.cursor + 1 < SURVEY_ITEMS.length) {
+    for (const im of SURVEY_ITEMS[S.itemOrder[S.cursor + 1]].images) {
+      const i = new Image(); i.src = im.src;
+    }
+  }
+}
+
+$("btn-prev").onclick = () => { if (S.cursor > 0) { S.cursor--; save(); render(); } };
+$("btn-next").onclick = () => {
+  if (!itemComplete(curItem())) return;
+  if (S.cursor === SURVEY_ITEMS.length - 1) { finish(); return; }
+  S.cursor++; save(); render();
+};
+$("lightbox").onclick = () => $("lightbox").classList.add("hidden");
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") $("lightbox").classList.add("hidden");
+});
+
+/* ================= submit ================= */
+function buildRows() {
+  const rows = [];
+  const ts = new Date().toISOString();
+  for (const it of SURVEY_ITEMS) {
+    const perm = S.perms[it.id];
+    perm.forEach((origIdx, pos) => {
+      const img = it.images[origIdx];
+      rows.push([ts, S.name, S.startedAt, it.id, img.k, pos + 1,
+                 S.answers[it.id].align[origIdx], S.answers[it.id].aes[origIdx]]);
+    });
+  }
+  return rows;
+}
+
+async function finish() {
+  $("survey").classList.add("hidden");
+  const done = $("done");
+  done.classList.remove("hidden");
+  done.innerHTML = `<div class="spin"></div><h2>제출 중...</h2><p>잠시만 기다려 주세요.</p>`;
+  const payload = { annotator: S.name, startedAt: S.startedAt,
+                    submittedAt: new Date().toISOString(), rows: buildRows() };
+  if (!API_URL) { showBackup(payload, "제출 서버가 아직 설정되지 않았습니다."); return; }
+  try {
+    const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    done.innerHTML = `<h2>제출 완료! 🎉</h2>
+      <p>${S.name} 님, 참여해 주셔서 정말 감사합니다.</p>
+      <p>이 창은 닫으셔도 됩니다.</p>`;
+    localStorage.setItem(storeKey(S.nameKey) + "_submitted", "1");
+  } catch (e) {
+    showBackup(payload, "네트워크 오류로 제출에 실패했습니다.");
+  }
+}
+
+function showBackup(payload, reason) {
+  const done = $("done");
+  done.innerHTML = `<h2>응답 백업이 필요합니다</h2>
+    <p>${reason}</p>
+    <p>아래 버튼으로 응답 파일을 저장한 뒤 <b>연구자(강훈)에게 파일을 보내 주세요.</b></p>
+    <button class="btn btn-primary" id="btn-download" style="margin-top:14px">응답 파일 다운로드</button>
+    <div style="margin-top:12px"><button class="btn btn-ghost" id="btn-retry">다시 제출 시도</button></div>`;
+  $("btn-download").onclick = () => {
+    const blob = new Blob([JSON.stringify(payload, null, 1)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `survey_${S.nameKey}_${Date.now()}.json`;
+    a.click();
+  };
+  $("btn-retry").onclick = finish;
+}
+</script>
+</body>
+</html>
