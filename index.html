@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Image Evaluation Study</title>
+<title>Image Evaluation Survey</title>
 <script src="data.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -17,6 +17,14 @@
          background: var(--bg); color: var(--text); line-height: 1.55; }
   .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 60px; }
   .hidden { display: none !important; }
+
+  /* ---------- language toggle ---------- */
+  .lang-toggle { position: fixed; top: 12px; right: 14px; z-index: 30;
+                 display: flex; background: var(--card); border: 1px solid var(--line);
+                 border-radius: 999px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .lang-toggle button { border: none; background: transparent; cursor: pointer;
+                        font-size: 12.5px; font-weight: 600; padding: 6px 12px; color: var(--sub); }
+  .lang-toggle button.on { background: var(--accent); color: #fff; }
 
   /* ---------- gate ---------- */
   .gate-card { max-width: 640px; margin: 40px auto; background: var(--card);
@@ -44,7 +52,7 @@
   .topbar { position: sticky; top: 0; z-index: 10; background: var(--bg);
             padding: 10px 0 12px; }
   .topline { display: flex; justify-content: space-between; align-items: baseline;
-             font-size: 13px; color: var(--sub); margin-bottom: 6px; }
+             font-size: 13px; color: var(--sub); margin-bottom: 6px; padding-right: 130px; }
   .topline b { color: var(--text); font-size: 15px; }
   .bar { height: 6px; background: #e6e9ee; border-radius: 3px; overflow: hidden; }
   .bar > div { height: 100%; background: var(--accent); width: 0%; transition: width .2s; }
@@ -97,41 +105,30 @@
 </style>
 </head>
 <body>
+<div class="lang-toggle">
+  <button id="lang-en">English</button>
+  <button id="lang-ko">한국어</button>
+</div>
 <div class="wrap">
 
   <!-- ========== entry gate ========== -->
   <div id="gate" class="gate-card">
-    <h1>이미지 평가 설문</h1>
-    <div class="sub">텍스트 프롬프트로 생성된 이미지 품질 평가 연구</div>
-    <div class="guide">
-      총 <b>80문항</b>입니다. 각 문항에서 하나의 텍스트 프롬프트와
-      4장의 생성 이미지가 표시됩니다. 각 이미지에 대해 두 가지 항목을 <b>1~5점</b>으로 평가해 주세요.
-      <ul>
-        <li><b>텍스트 일치도</b> — 이미지가 주어진 텍스트 프롬프트의 내용과 얼마나 잘 일치하는지
-            (1 = 매우 나쁨, 5 = 매우 좋음). 네 이미지를 서로 비교하면서 점수를 매겨 주세요.</li>
-        <li><b>심미성 (선호도)</b> — 이미지의 전반적인 품질과 아름다움에 대한 개인적인 선호
-            (1 = 매우 별로, 5 = 매우 좋음).</li>
-      </ul>
-      <ul style="margin-top:10px">
-        <li>이미지를 클릭하면 크게 볼 수 있습니다.</li>
-        <li>진행 상황은 <b>이 브라우저에 자동 저장</b>됩니다. 중간에 창을 닫아도 같은 기기·브라우저에서
-            같은 이름으로 다시 접속하면 이어서 진행됩니다.</li>
-        <li>모든 문항 완료 후 마지막에 <b>제출 버튼</b>을 꼭 눌러 주세요.</li>
-      </ul>
-    </div>
-    <label>이름 (본인 확인용)</label>
-    <input type="text" id="inp-name" placeholder="예: 홍길동" autocomplete="off">
-    <label>전화번호 (선택) — 참여자 추첨용입니다. 추첨을 원하지 않으시면 비워 두셔도 돼요 😊</label>
-    <input type="text" id="inp-phone" placeholder="예: 010-1234-5678" autocomplete="off">
+    <h1 id="g-title"></h1>
+    <div class="sub" id="g-sub"></div>
+    <div class="guide" id="g-guide"></div>
+    <label id="g-name-label"></label>
+    <input type="text" id="inp-name" autocomplete="off">
+    <label id="g-phone-label"></label>
+    <input type="text" id="inp-phone" placeholder="010-1234-5678" autocomplete="off">
     <div class="err" id="gate-err"></div>
-    <button class="btn btn-primary btn-block" id="btn-start">시작하기</button>
+    <button class="btn btn-primary btn-block" id="btn-start"></button>
   </div>
 
   <!-- ========== survey ========== -->
   <div id="survey" class="hidden">
     <div class="topbar">
       <div class="topline">
-        <span><b id="prog-num"></b> / 80 문항</span>
+        <span><b id="prog-num"></b> / 80 <span id="prog-word"></span></span>
         <span id="who"></span>
       </div>
       <div class="bar"><div id="prog-fill"></div></div>
@@ -142,9 +139,9 @@
     </div>
     <div class="grid" id="grid"></div>
     <div class="nav">
-      <button class="btn btn-ghost" id="btn-prev">← 이전</button>
+      <button class="btn btn-ghost" id="btn-prev"></button>
       <span class="hint" id="nav-hint"></span>
-      <button class="btn btn-primary" id="btn-next">다음 →</button>
+      <button class="btn btn-primary" id="btn-next"></button>
     </div>
   </div>
 
@@ -159,6 +156,124 @@
 /* ================= config ================= */
 const API_URL = "https://script.google.com/macros/s/AKfycbzTa26SQ75dTBEKqDPk_741UJWLbRWicaG59m4oJAwCaLBfEdQJ2mor_JzfZ2OqFBCP/exec";
 const STORE_PREFIX = "festdpo_v1_";
+
+/* ================= i18n ================= */
+const T = {
+  en: {
+    title: "Image Evaluation Survey",
+    sub: "A study on the quality of AI-generated images",
+    guide: `There are <b>80 questions</b> in total. Each question shows one text prompt and
+      4 generated images. Please rate each image on two criteria, from <b>1 to 5</b>.
+      <ul>
+        <li><b>Text alignment</b> — how closely the image matches the given text prompt
+            (1 = very poor, 5 = excellent). Please compare the four images against each other.</li>
+        <li><b>Aesthetics (preference)</b> — your personal preference for the overall quality
+            and beauty of the image (1 = very poor, 5 = excellent).</li>
+      </ul>
+      <ul style="margin-top:10px">
+        <li>Click an image to view it in full size.</li>
+        <li>Your progress is <b>saved automatically in this browser</b>. If you close the tab,
+            come back on the same device and enter the same name to continue.</li>
+        <li>After the last question, be sure to press the <b>Submit</b> button.</li>
+      </ul>`,
+    nameLabel: "Name",
+    namePh: "e.g., Gildong Hong",
+    phoneLabel: "Phone number (optional) — for the participation raffle. Leave it blank if you'd rather not enter. 😊",
+    start: "Start",
+    errName: "Please enter your name.",
+    progWord: "questions",
+    who: (n) => n,
+    imageN: (i) => `Image ${i}`,
+    align: "Text alignment",
+    aes: "Aesthetics (preference)",
+    prev: "← Back",
+    next: "Next →",
+    submit: "Submit ✓",
+    hint: "Please rate both criteria for every image",
+    submitting: "Submitting...",
+    wait: "Please wait a moment.",
+    doneTitle: "Submitted! 🎉",
+    doneThanks: (n) => `${n}, thank you so much for participating.`,
+    doneClose: "You can close this window now.",
+    backupTitle: "Backup of your responses needed",
+    failNet: "Submission failed due to a network error.",
+    failNoServer: "The submission server is not configured yet.",
+    backupInstr: "Please download the file below and <b>send it to the researcher (Kanghoon).</b>",
+    download: "Download response file",
+    retry: "Try submitting again",
+  },
+  ko: {
+    title: "이미지 평가 설문",
+    sub: "AI 생성 이미지 품질 평가 연구",
+    guide: `총 <b>80문항</b>입니다. 각 문항에서 하나의 텍스트 프롬프트와 4장의 생성 이미지가
+      표시됩니다. 각 이미지에 대해 두 가지 항목을 <b>1~5점</b>으로 평가해 주세요.
+      <ul>
+        <li><b>텍스트 일치도</b> — 이미지가 주어진 텍스트 프롬프트의 내용과 얼마나 잘 일치하는지
+            (1 = 매우 나쁨, 5 = 매우 좋음). 네 이미지를 서로 비교하면서 점수를 매겨 주세요.</li>
+        <li><b>심미성 (선호도)</b> — 이미지의 전반적인 품질과 아름다움에 대한 개인적인 선호
+            (1 = 매우 별로, 5 = 매우 좋음).</li>
+      </ul>
+      <ul style="margin-top:10px">
+        <li>이미지를 클릭하면 크게 볼 수 있습니다.</li>
+        <li>진행 상황은 <b>이 브라우저에 자동 저장</b>됩니다. 창을 닫아도 같은 기기에서
+            같은 이름으로 다시 접속하면 이어서 진행됩니다.</li>
+        <li>모든 문항 완료 후 마지막에 <b>제출 버튼</b>을 꼭 눌러 주세요.</li>
+      </ul>`,
+    nameLabel: "이름 (본인 확인용)",
+    namePh: "예: 홍길동",
+    phoneLabel: "전화번호 (선택) — 참여자 추첨용입니다. 추첨을 원하지 않으시면 비워 두셔도 돼요 😊",
+    start: "시작하기",
+    errName: "이름을 입력해 주세요.",
+    progWord: "문항",
+    who: (n) => n + " 님",
+    imageN: (i) => `이미지 ${i}`,
+    align: "텍스트 일치도",
+    aes: "심미성 (선호도)",
+    prev: "← 이전",
+    next: "다음 →",
+    submit: "제출하기 ✓",
+    hint: "모든 이미지에 두 항목씩 점수를 매겨 주세요",
+    submitting: "제출 중...",
+    wait: "잠시만 기다려 주세요.",
+    doneTitle: "제출 완료! 🎉",
+    doneThanks: (n) => `${n} 님, 참여해 주셔서 정말 감사합니다.`,
+    doneClose: "이 창은 닫으셔도 됩니다.",
+    backupTitle: "응답 백업이 필요합니다",
+    failNet: "네트워크 오류로 제출에 실패했습니다.",
+    failNoServer: "제출 서버가 아직 설정되지 않았습니다.",
+    backupInstr: "아래 버튼으로 응답 파일을 저장한 뒤 <b>연구자(강훈)에게 파일을 보내 주세요.</b>",
+    download: "응답 파일 다운로드",
+    retry: "다시 제출 시도",
+  },
+};
+let lang = localStorage.getItem("festdpo_lang") || "en";
+const t = (k, ...a) => (typeof T[lang][k] === "function" ? T[lang][k](...a) : T[lang][k]);
+
+const $ = (id) => document.getElementById(id);
+let doneState = null;   // {kind:'submitting'|'ok'|'backup', payload?, failKey?}
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  $("lang-en").classList.toggle("on", lang === "en");
+  $("lang-ko").classList.toggle("on", lang === "ko");
+  // gate
+  $("g-title").textContent = t("title");
+  $("g-sub").textContent = t("sub");
+  $("g-guide").innerHTML = t("guide");
+  $("g-name-label").textContent = t("nameLabel");
+  $("inp-name").placeholder = t("namePh");
+  $("g-phone-label").textContent = t("phoneLabel");
+  $("btn-start").textContent = t("start");
+  if ($("gate-err").textContent) $("gate-err").textContent = t("errName");
+  // survey (re-render if active)
+  $("prog-word").textContent = t("progWord");
+  if (S && !$("survey").classList.contains("hidden")) render();
+  // done
+  if (doneState) renderDone();
+}
+function setLang(l) { lang = l; localStorage.setItem("festdpo_lang", l); applyLang(); }
+$("lang-en").onclick = () => setLang("en");
+$("lang-ko").onclick = () => setLang("ko");
 
 /* ================= seeded rng ================= */
 function xmur3(str) {
@@ -191,8 +306,7 @@ function shuffled(arr, rng) {
 }
 
 /* ================= state ================= */
-let S = null;   // { name, nameKey, itemOrder, perms, answers, cursor, startedAt }
-const $ = (id) => document.getElementById(id);
+let S = null;   // { name, nameKey, sessionId, phone, itemOrder, perms, answers, cursor, startedAt }
 
 function storeKey(nameKey) { return STORE_PREFIX + nameKey; }
 function save() { localStorage.setItem(storeKey(S.nameKey), JSON.stringify(S)); }
@@ -222,7 +336,7 @@ function initState(name) {
 $("btn-start").onclick = () => {
   const name = $("inp-name").value.trim();
   const phone = $("inp-phone").value.trim();
-  if (name.length < 2) { $("gate-err").textContent = "이름을 입력해 주세요."; return; }
+  if (name.length < 2) { $("gate-err").textContent = t("errName"); return; }
   initState(name);
   if (phone) S.phone = phone;
   save();
@@ -244,7 +358,7 @@ function render() {
   const perm = S.perms[it.id];          // display position p shows original image index perm[p]
   $("prog-num").textContent = S.cursor + 1;
   $("prog-fill").style.width = (100 * S.cursor / SURVEY_ITEMS.length) + "%";
-  $("who").textContent = S.name + " 님";
+  $("who").textContent = t("who", S.name);
   $("prompt-text").textContent = it.prompt;
 
   const grid = $("grid");
@@ -254,11 +368,11 @@ function render() {
     const card = document.createElement("div");
     card.className = "card";
     card.innerHTML =
-      `<div class="imgno">이미지 ${pos + 1}</div>` +
-      `<img src="${img.src}" loading="eager" alt="이미지 ${pos + 1}">` +
+      `<div class="imgno">${t("imageN", pos + 1)}</div>` +
+      `<img src="${img.src}" loading="eager" alt="${t("imageN", pos + 1)}">` +
       `<div class="rate">` +
-        `<div class="rlabel">텍스트 일치도</div><div class="scale" data-k="align"></div>` +
-        `<div class="rlabel">심미성 (선호도)</div><div class="scale" data-k="aes"></div>` +
+        `<div class="rlabel">${t("align")}</div><div class="scale" data-k="align"></div>` +
+        `<div class="rlabel">${t("aes")}</div><div class="scale" data-k="aes"></div>` +
       `</div>`;
     card.querySelector("img").onclick = () => {
       $("lightbox-img").src = img.src;
@@ -295,10 +409,11 @@ function updateNav() {
   const it = curItem();
   const done = itemComplete(it);
   const last = S.cursor === SURVEY_ITEMS.length - 1;
+  $("btn-prev").textContent = t("prev");
   $("btn-prev").disabled = S.cursor === 0;
   $("btn-next").disabled = !done;
-  $("btn-next").textContent = last ? "제출하기 ✓" : "다음 →";
-  $("nav-hint").textContent = done ? "" : "모든 이미지에 두 항목씩 점수를 매겨 주세요";
+  $("btn-next").textContent = last ? t("submit") : t("next");
+  $("nav-hint").textContent = done ? "" : t("hint");
 }
 
 function preloadNext() {
@@ -335,43 +450,52 @@ function buildRows() {
   return rows;
 }
 
-async function finish() {
-  $("survey").classList.add("hidden");
+function renderDone() {
   const done = $("done");
   done.classList.remove("hidden");
-  done.innerHTML = `<div class="spin"></div><h2>제출 중...</h2><p>잠시만 기다려 주세요.</p>`;
-  const payload = { annotator: S.name, sessionId: S.sessionId, phone: S.phone || "",
-                    startedAt: S.startedAt, submittedAt: new Date().toISOString(),
-                    rows: buildRows() };
-  if (!API_URL) { showBackup(payload, "제출 서버가 아직 설정되지 않았습니다."); return; }
-  try {
-    const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    done.innerHTML = `<h2>제출 완료! 🎉</h2>
-      <p>${S.name} 님, 참여해 주셔서 정말 감사합니다.</p>
-      <p>이 창은 닫으셔도 됩니다.</p>`;
-    localStorage.setItem(storeKey(S.nameKey) + "_submitted", "1");
-  } catch (e) {
-    showBackup(payload, "네트워크 오류로 제출에 실패했습니다.");
+  if (doneState.kind === "submitting") {
+    done.innerHTML = `<div class="spin"></div><h2>${t("submitting")}</h2><p>${t("wait")}</p>`;
+  } else if (doneState.kind === "ok") {
+    done.innerHTML = `<h2>${t("doneTitle")}</h2>
+      <p>${t("doneThanks", S.name)}</p><p>${t("doneClose")}</p>`;
+  } else if (doneState.kind === "backup") {
+    done.innerHTML = `<h2>${t("backupTitle")}</h2>
+      <p>${t(doneState.failKey)}</p>
+      <p>${t("backupInstr")}</p>
+      <button class="btn btn-primary" id="btn-download" style="margin-top:14px">${t("download")}</button>
+      <div style="margin-top:12px"><button class="btn btn-ghost" id="btn-retry">${t("retry")}</button></div>`;
+    $("btn-download").onclick = () => {
+      const blob = new Blob([JSON.stringify(doneState.payload, null, 1)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `survey_${S.nameKey}_${Date.now()}.json`;
+      a.click();
+    };
+    $("btn-retry").onclick = finish;
   }
 }
 
-function showBackup(payload, reason) {
-  const done = $("done");
-  done.innerHTML = `<h2>응답 백업이 필요합니다</h2>
-    <p>${reason}</p>
-    <p>아래 버튼으로 응답 파일을 저장한 뒤 <b>연구자(강훈)에게 파일을 보내 주세요.</b></p>
-    <button class="btn btn-primary" id="btn-download" style="margin-top:14px">응답 파일 다운로드</button>
-    <div style="margin-top:12px"><button class="btn btn-ghost" id="btn-retry">다시 제출 시도</button></div>`;
-  $("btn-download").onclick = () => {
-    const blob = new Blob([JSON.stringify(payload, null, 1)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `survey_${S.nameKey}_${Date.now()}.json`;
-    a.click();
-  };
-  $("btn-retry").onclick = finish;
+async function finish() {
+  $("survey").classList.add("hidden");
+  doneState = { kind: "submitting" };
+  renderDone();
+  const payload = { annotator: S.name, sessionId: S.sessionId, phone: S.phone || "",
+                    startedAt: S.startedAt, submittedAt: new Date().toISOString(),
+                    rows: buildRows() };
+  if (!API_URL) { doneState = { kind: "backup", payload, failKey: "failNoServer" }; renderDone(); return; }
+  try {
+    const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    doneState = { kind: "ok" };
+    renderDone();
+    localStorage.setItem(storeKey(S.nameKey) + "_submitted", "1");
+  } catch (e) {
+    doneState = { kind: "backup", payload, failKey: "failNet" };
+    renderDone();
+  }
 }
+
+applyLang();
 </script>
 </body>
 </html>
