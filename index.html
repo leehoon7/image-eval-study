@@ -104,7 +104,7 @@
     <h1>이미지 평가 설문</h1>
     <div class="sub">텍스트 프롬프트로 생성된 이미지 품질 평가 연구</div>
     <div class="guide">
-      총 <b>80문항</b>이며 약 <b>40~50분</b> 소요됩니다. 각 문항에서 하나의 텍스트 프롬프트와
+      총 <b>80문항</b>입니다. 각 문항에서 하나의 텍스트 프롬프트와
       4장의 생성 이미지가 표시됩니다. 각 이미지에 대해 두 가지 항목을 <b>1~5점</b>으로 평가해 주세요.
       <ul>
         <li><b>텍스트 일치도</b> — 이미지가 주어진 텍스트 프롬프트의 내용과 얼마나 잘 일치하는지
@@ -119,10 +119,10 @@
         <li>모든 문항 완료 후 마지막에 <b>제출 버튼</b>을 꼭 눌러 주세요.</li>
       </ul>
     </div>
-    <label>이름 (본인 확인용, 실명 또는 전달받은 ID)</label>
+    <label>이름 (본인 확인용)</label>
     <input type="text" id="inp-name" placeholder="예: 홍길동" autocomplete="off">
-    <label>접속 코드</label>
-    <input type="text" id="inp-code" placeholder="전달받은 접속 코드를 입력하세요" autocomplete="off">
+    <label>전화번호 (선택) — 참여자 추첨용입니다. 추첨을 원하지 않으시면 비워 두셔도 돼요 😊</label>
+    <input type="text" id="inp-phone" placeholder="예: 010-1234-5678" autocomplete="off">
     <div class="err" id="gate-err"></div>
     <button class="btn btn-primary btn-block" id="btn-start">시작하기</button>
   </div>
@@ -158,7 +158,6 @@
 "use strict";
 /* ================= config ================= */
 const API_URL = "";              // Google Apps Script web app URL (set after deploy)
-const ACCESS_CODE = "fest2026";
 const STORE_PREFIX = "festdpo_v1_";
 
 /* ================= seeded rng ================= */
@@ -213,18 +212,20 @@ function initState(name) {
   for (const it of SURVEY_ITEMS) perms[it.id] = shuffled([0, 1, 2, 3], rng);
   const answers = {};
   for (const it of SURVEY_ITEMS) answers[it.id] = { align: [null,null,null,null], aes: [null,null,null,null] };
+  const startedAt = new Date().toISOString();
   S = { name: name.trim(), nameKey, itemOrder, perms, answers, cursor: 0,
-        startedAt: new Date().toISOString() };
+        startedAt, sessionId: nameKey + "_" + startedAt, phone: null };
   save();
 }
 
 /* ================= gate ================= */
 $("btn-start").onclick = () => {
   const name = $("inp-name").value.trim();
-  const code = $("inp-code").value.trim();
+  const phone = $("inp-phone").value.trim();
   if (name.length < 2) { $("gate-err").textContent = "이름을 입력해 주세요."; return; }
-  if (code !== ACCESS_CODE) { $("gate-err").textContent = "접속 코드가 올바르지 않습니다."; return; }
   initState(name);
+  if (phone) S.phone = phone;
+  save();
   $("gate").classList.add("hidden");
   $("survey").classList.remove("hidden");
   render();
@@ -339,8 +340,9 @@ async function finish() {
   const done = $("done");
   done.classList.remove("hidden");
   done.innerHTML = `<div class="spin"></div><h2>제출 중...</h2><p>잠시만 기다려 주세요.</p>`;
-  const payload = { annotator: S.name, startedAt: S.startedAt,
-                    submittedAt: new Date().toISOString(), rows: buildRows() };
+  const payload = { annotator: S.name, sessionId: S.sessionId, phone: S.phone || "",
+                    startedAt: S.startedAt, submittedAt: new Date().toISOString(),
+                    rows: buildRows() };
   if (!API_URL) { showBackup(payload, "제출 서버가 아직 설정되지 않았습니다."); return; }
   try {
     const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
