@@ -31,6 +31,9 @@
                border: 1px solid var(--line); border-radius: 12px; padding: 32px; }
   .gate-card h1 { font-size: 22px; margin-bottom: 6px; }
   .gate-card .sub { color: var(--sub); font-size: 14px; margin-bottom: 22px; }
+  .intro { font-size: 14px; margin-bottom: 20px; }
+  .intro p { margin-bottom: 7px; }
+  .intro .thanks { font-weight: 700; color: var(--accent); margin-top: 10px; }
   .guide { background: #f2f5ff; border: 1px solid #dbe3fb; border-radius: 10px;
            padding: 16px 18px; font-size: 14px; margin-bottom: 22px; }
   .guide b { color: var(--accent); }
@@ -56,6 +59,19 @@
   .topline b { color: var(--text); font-size: 15px; }
   .bar { height: 6px; background: #e6e9ee; border-radius: 3px; overflow: hidden; }
   .bar > div { height: 100%; background: var(--accent); width: 0%; transition: width .2s; }
+
+  .mini-btn { border: 1px solid var(--line); background: var(--card); color: var(--accent);
+              font-size: 12px; font-weight: 600; border-radius: 999px; padding: 3px 10px;
+              cursor: pointer; margin-left: 10px; }
+  .mini-btn:hover { border-color: var(--accent); }
+  .scale-hint { font-size: 13px; color: var(--sub); margin: -8px 0 12px; }
+
+  /* ---------- help overlay ---------- */
+  #help-overlay { position: fixed; inset: 0; background: rgba(10,12,18,.55); z-index: 40;
+                  display: flex; align-items: center; justify-content: center; padding: 18px; }
+  .help-box { max-width: 660px; width: 100%; max-height: 85vh; overflow-y: auto;
+              background: var(--card); border-radius: 12px; padding: 24px; }
+  .help-box .guide { margin-bottom: 16px; }
 
   /* ---------- prompt ---------- */
   .prompt-box { background: var(--card); border: 1px solid var(--line);
@@ -116,6 +132,7 @@
   <div id="gate" class="gate-card">
     <h1 id="g-title"></h1>
     <div class="sub" id="g-sub"></div>
+    <div class="intro" id="g-intro"></div>
     <div class="guide" id="g-guide"></div>
     <label id="g-name-label"></label>
     <input type="text" id="inp-name" autocomplete="off">
@@ -130,7 +147,7 @@
     <div class="topbar">
       <div class="topline">
         <span><b id="prog-num"></b> / <span id="prog-total"></span> <span id="prog-word"></span></span>
-        <span id="who"></span>
+        <span><span id="who"></span><button class="mini-btn" id="btn-help"></button></span>
       </div>
       <div class="bar"><div id="prog-fill"></div></div>
     </div>
@@ -139,6 +156,7 @@
       <div class="txt" id="prompt-text"></div>
       <div class="txt-ko hidden" id="prompt-ko"></div>
     </div>
+    <div class="scale-hint" id="scale-hint"></div>
     <div class="grid" id="grid"></div>
     <div class="nav">
       <button class="btn btn-ghost" id="btn-prev"></button>
@@ -152,6 +170,12 @@
 
 </div>
 <div id="lightbox" class="hidden"><img id="lightbox-img" alt=""></div>
+<div id="help-overlay" class="hidden">
+  <div class="help-box">
+    <div class="guide" id="help-guide"></div>
+    <button class="btn btn-primary btn-block" id="btn-help-close" style="margin-top:0"></button>
+  </div>
+</div>
 
 <script>
 "use strict";
@@ -169,8 +193,15 @@ const T = {
   en: {
     title: "Image Evaluation Survey",
     sub: "A study on the quality of AI-generated images",
-    guide: `There are <b>${N_ITEMS} questions</b> in total. Each question shows one text prompt and
-      4 generated images. Please rate each image on two criteria, from <b>1 to 5</b>.
+    intro: `<p>🫶 Thank you for participating in this survey.</p>
+      <p>🏫 This survey is conducted by <b>SILAB (Systems Intelligence Lab) at KAIST</b> as part of
+      a research study on the evaluation of AI-generated images.</p>
+      <p>📷 The purpose of this study is to assess AI-generated images in terms of their
+      aesthetic quality and diversity.</p>
+      <p class="thanks">💙 We truly appreciate your time — thank you so much for participating!</p>`,
+    guide: `There are <b>${N_ITEMS} questions</b> in total${TEST_N ? "" : ", taking about <b>20 minutes</b>"}.
+      Each question shows one text prompt and
+      4 generated images. Please rate each image on two criteria, from <b>1 (very poor)</b> to <b>5 (excellent)</b>.
       <ul>
         <li><b>Text alignment</b> — how closely the image matches the given text prompt
             (1 = very poor, 5 = excellent). Please compare the four images against each other.</li>
@@ -202,6 +233,9 @@ const T = {
     next: "Next →",
     submit: "Submit ✓",
     hint: "Please rate both criteria for every image",
+    scaleHint: "Rate every image on both criteria — 1 = very poor, 5 = excellent (higher is better).",
+    help: "ℹ️ Instructions",
+    helpClose: "Close",
     submitting: "Submitting...",
     wait: "Please wait a moment.",
     doneTitle: "Submitted! 🎉",
@@ -217,8 +251,14 @@ const T = {
   ko: {
     title: "이미지 평가 설문",
     sub: "AI 생성 이미지 품질 평가 연구",
-    guide: `총 <b>${N_ITEMS}문항</b>입니다. 각 문항에서 하나의 텍스트 프롬프트와 4장의 생성 이미지가
-      표시됩니다. 각 이미지에 대해 두 가지 항목을 <b>1~5점</b>으로 평가해 주세요.
+    intro: `<p>🫶 설문에 참여해 주셔서 감사합니다.</p>
+      <p>🏫 본 설문은 <b>KAIST SILAB(Systems Intelligence Lab)</b>에서 AI 생성 이미지 평가 연구의
+      일환으로 진행됩니다.</p>
+      <p>📷 본 연구의 목적은 AI가 생성한 이미지의 심미적 품질과 다양성을 평가하는 것입니다.</p>
+      <p class="thanks">💙 소중한 시간을 내어 참여해 주셔서 진심으로 감사드립니다!</p>`,
+    guide: `총 <b>${N_ITEMS}문항</b>이며${TEST_N ? "" : ", 전체 소요 시간은 약 <b>20분</b>입니다"}.
+      각 문항에서 하나의 텍스트 프롬프트와 4장의 생성 이미지가
+      표시됩니다. 각 이미지에 대해 두 가지 항목을 <b>1점(매우 나쁨) ~ 5점(매우 좋음)</b>으로 평가해 주세요.
       <ul>
         <li><b>텍스트 일치도</b> — 이미지가 주어진 텍스트 프롬프트의 내용과 얼마나 잘 일치하는지
             (1 = 매우 나쁨, 5 = 매우 좋음). 네 이미지를 서로 비교하면서 점수를 매겨 주세요.</li>
@@ -249,6 +289,9 @@ const T = {
     next: "다음 →",
     submit: "제출하기 ✓",
     hint: "모든 이미지에 두 항목씩 점수를 매겨 주세요",
+    scaleHint: "각 이미지를 두 항목 모두 평가해 주세요 — 1점 = 매우 나쁨, 5점 = 매우 좋음 (높을수록 좋은 점수예요).",
+    help: "ℹ️ 안내 보기",
+    helpClose: "닫기",
     submitting: "제출 중...",
     wait: "잠시만 기다려 주세요.",
     doneTitle: "제출 완료! 🎉",
@@ -275,7 +318,11 @@ function applyLang() {
   // gate
   $("g-title").textContent = t("title");
   $("g-sub").textContent = t("sub");
+  $("g-intro").innerHTML = t("intro");
   $("g-guide").innerHTML = t("guide");
+  $("btn-help").textContent = t("help");
+  $("btn-help-close").textContent = t("helpClose");
+  if (!$("help-overlay").classList.contains("hidden")) $("help-guide").innerHTML = t("guide");
   $("g-name-label").textContent = t("nameLabel");
   $("inp-name").placeholder = t("namePh");
   $("g-phone-label").textContent = t("phoneLabel");
@@ -376,6 +423,7 @@ function render() {
   $("prog-num").textContent = S.cursor + 1;
   $("prog-fill").style.width = (100 * S.cursor / ITEMS.length) + "%";
   $("who").textContent = t("who", S.name);
+  $("scale-hint").textContent = t("scaleHint");
   $("prompt-text").textContent = it.prompt;
   const showKo = lang === "ko" && it.ko;
   $("prompt-ko").textContent = showKo ? "🇰🇷 " + it.ko : "";
@@ -451,8 +499,19 @@ $("btn-next").onclick = () => {
   S.cursor++; save(); render();
 };
 $("lightbox").onclick = () => $("lightbox").classList.add("hidden");
+$("btn-help").onclick = () => {
+  $("help-guide").innerHTML = t("guide");
+  $("help-overlay").classList.remove("hidden");
+};
+$("btn-help-close").onclick = () => $("help-overlay").classList.add("hidden");
+$("help-overlay").onclick = (e) => {
+  if (e.target === $("help-overlay")) $("help-overlay").classList.add("hidden");
+};
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") $("lightbox").classList.add("hidden");
+  if (e.key === "Escape") {
+    $("lightbox").classList.add("hidden");
+    $("help-overlay").classList.add("hidden");
+  }
 });
 
 /* ================= submit ================= */
