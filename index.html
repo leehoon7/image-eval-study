@@ -63,6 +63,7 @@
   .prompt-box .cap { font-size: 12px; font-weight: 700; color: var(--accent);
                      letter-spacing: .4px; margin-bottom: 4px; }
   .prompt-box .txt { font-size: 17px; font-weight: 600; }
+  .prompt-box .txt-ko { font-size: 14px; color: var(--sub); margin-top: 6px; }
 
   /* ---------- image cards ---------- */
   .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
@@ -136,6 +137,7 @@
     <div class="prompt-box">
       <div class="cap">TEXT PROMPT</div>
       <div class="txt" id="prompt-text"></div>
+      <div class="txt-ko hidden" id="prompt-ko"></div>
     </div>
     <div class="grid" id="grid"></div>
     <div class="nav">
@@ -366,6 +368,9 @@ function render() {
   $("prog-fill").style.width = (100 * S.cursor / ITEMS.length) + "%";
   $("who").textContent = t("who", S.name);
   $("prompt-text").textContent = it.prompt;
+  const showKo = lang === "ko" && it.ko;
+  $("prompt-ko").textContent = showKo ? "🇰🇷 " + it.ko : "";
+  $("prompt-ko").classList.toggle("hidden", !showKo);
 
   const grid = $("grid");
   grid.innerHTML = "";
