@@ -184,6 +184,8 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzTa26SQ75dTBEKqDPk_741
 
 // ?test=5 -> short 5-question version (separate saved progress, sessionId tagged "_test5")
 const TEST_N = Math.max(0, parseInt(new URLSearchParams(location.search).get("test")) || 0);
+// ?browse=1 -> free navigation without rating (for screenshots / internal review; no submit)
+const BROWSE = new URLSearchParams(location.search).has("browse");
 const ITEMS = TEST_N ? SURVEY_ITEMS.slice(0, TEST_N) : SURVEY_ITEMS;
 const N_ITEMS = ITEMS.length;
 const STORE_PREFIX = "festdpo_v1_" + (TEST_N ? "test" + TEST_N + "_" : "");
@@ -203,7 +205,7 @@ const T = {
       Each question shows one text prompt and
       4 generated images. Please rate each image on two criteria, from <b>1 (very poor)</b> to <b>5 (excellent)</b>.
       <ul>
-        <li><b>Text alignment</b> — how closely the image matches the given text prompt
+        <li><b>Prompt alignment</b> — how closely the image matches the given text prompt
             (1 = very poor, 5 = excellent). Please compare the four images against each other.</li>
         <li><b>Aesthetics (preference)</b> — your personal preference for the overall quality
             and beauty of the image (1 = very poor, 5 = excellent).</li>
@@ -227,7 +229,7 @@ const T = {
     progWord: "questions",
     who: (n) => n,
     imageN: (i) => `Image ${i}`,
-    align: "Text alignment",
+    align: "Prompt alignment",
     aes: "Aesthetics (preference)",
     prev: "← Back",
     next: "Next →",
@@ -260,7 +262,7 @@ const T = {
       각 문항에서 하나의 텍스트 프롬프트와 4장의 생성 이미지가
       표시됩니다. 각 이미지에 대해 두 가지 항목을 <b>1점(매우 나쁨) ~ 5점(매우 좋음)</b>으로 평가해 주세요.
       <ul>
-        <li><b>텍스트 일치도</b> — 이미지가 주어진 텍스트 프롬프트의 내용과 얼마나 잘 일치하는지
+        <li><b>프롬프트 일치도</b> — 이미지가 주어진 텍스트 프롬프트의 내용과 얼마나 잘 일치하는지
             (1 = 매우 나쁨, 5 = 매우 좋음). 네 이미지를 서로 비교하면서 점수를 매겨 주세요.</li>
         <li><b>심미성 (선호도)</b> — 이미지의 전반적인 품질과 아름다움에 대한 개인적인 선호
             (1 = 매우 별로, 5 = 매우 좋음).</li>
@@ -283,7 +285,7 @@ const T = {
     progWord: "문항",
     who: (n) => n + " 님",
     imageN: (i) => `이미지 ${i}`,
-    align: "텍스트 일치도",
+    align: "프롬프트 일치도",
     aes: "심미성 (선호도)",
     prev: "← 이전",
     next: "다음 →",
@@ -479,9 +481,9 @@ function updateNav() {
   const last = S.cursor === ITEMS.length - 1;
   $("btn-prev").textContent = t("prev");
   $("btn-prev").disabled = S.cursor === 0;
-  $("btn-next").disabled = !done;
+  $("btn-next").disabled = !done && !BROWSE;
   $("btn-next").textContent = last ? t("submit") : t("next");
-  $("nav-hint").textContent = done ? "" : t("hint");
+  $("nav-hint").textContent = done || BROWSE ? "" : t("hint");
 }
 
 function preloadNext() {
@@ -494,8 +496,8 @@ function preloadNext() {
 
 $("btn-prev").onclick = () => { if (S.cursor > 0) { S.cursor--; save(); render(); } };
 $("btn-next").onclick = () => {
-  if (!itemComplete(curItem())) return;
-  if (S.cursor === ITEMS.length - 1) { finish(); return; }
+  if (!itemComplete(curItem()) && !BROWSE) return;
+  if (S.cursor === ITEMS.length - 1) { if (!BROWSE) finish(); return; }
   S.cursor++; save(); render();
 };
 $("lightbox").onclick = () => $("lightbox").classList.add("hidden");
